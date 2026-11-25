@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f7d4f">
+<title>云边牧场 · 养殖放置养成</title>
+<meta name="description" content="云边牧场是一款单文件放置养成游戏：22 种动物分六个牧场区按秒产金，买动物、升等级、接委托、点研究、转生传承，离线也在产出，进度自动保存在本机浏览器。">
+<style>
+:root{
+  --bg:#f7f1e3; --card:#fffdf7; --ink:#2a2a24; --muted:#7d7666;
+  --green:#2f7d4f; --green-d:#22603c; --green-l:#e3f1e4;
+  --amber:#c98a24; --amber-l:#f8ebcd; --line:#e7dcc4; --danger:#b2452e;
+  --pink:#c94f6d; --pink-l:#fbe6ea;
+  --shadow:0 2px 10px rgba(86,70,36,.08); --radius:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:system-ui,-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  color:var(--ink);background:linear-gradient(180deg,#faf5e9 0%,#f4ecda 40%,#efe6d1 100%);
+  background-attachment:fixed;min-height:100vh;font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+h1,h2,h3,p{margin:0}
+.app{max-width:720px;margin:0 auto;padding-bottom:calc(70px + env(safe-area-inset-bottom))}
+.topbar{
+  position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:10px 14px calc(10px + env(safe-area-inset-top,0));
+  background:rgba(250,245,233,.93);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:7px;font-weight:700;font-size:15px;letter-spacing:.5px;white-space:nowrap}
+.brand .logo{font-size:19px}
+.wallet{display:flex;flex-direction:column;align-items:flex-end;gap:1px;min-width:0}
+.coin{display:flex;align-items:center;gap:6px;background:#fff8e6;border:1px solid #eddcb2;border-radius:999px;padding:3px 11px 3px 8px;font-weight:700;font-size:16px;font-variant-numeric:tabular-nums}
+.coin .coin-ico{font-size:13px}
+.wallet-sub{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.wallet-sub .dot{margin:0 4px;opacity:.6}
+main{padding:12px 14px 8px}
+.tab-panel{display:none}
+.tab-panel.active{display:block;animation:fade .18s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.panel-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:2px 2px 10px}
+.panel-head h1{font-size:19px;font-weight:800;letter-spacing:.5px}
+.hint{font-size:12px;color:var(--muted);text-align:right}
+.list{display:flex;flex-direction:column;gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.species{padding:11px 12px;display:flex;flex-direction:column;gap:9px}
+.species.locked{background:#fbf7ee;box-shadow:none}
+.sp-top{display:flex;gap:10px;align-items:flex-start}
+.sp-emoji{
+  flex:0 0 auto;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:25px;
+  background:linear-gradient(160deg,#f6eed8,#eadfc2);border:1px solid #e8dcc0;
+}
+.species.locked .sp-emoji{filter:grayscale(1);opacity:.55}
+.sp-meta{flex:1;min-width:0}
+.sp-name{font-weight:700;font-size:15.5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pill{font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--green-l);color:var(--green-d);border:1px solid #cbe2cd;white-space:nowrap}
+.pill.gold{background:var(--amber-l);color:#8a5c10;border-color:#eddcb2}
+.pill.grey{background:#f0ece0;color:#8b8474;border-color:#e3dccb}
+.pill.pink{background:var(--pink-l);color:#9b3350;border-color:#f2ccd6}
+.sp-sub{font-size:12px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+.sp-sub b{color:var(--ink);font-weight:700}
+.bar{height:5px;border-radius:999px;background:#efe7d5;margin-top:7px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#7fbf8c,#2f7d4f);transition:width .18s linear}
+.sp-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{
+  min-height:44px;border-radius:12px;padding:8px 12px;font-weight:700;font-size:13.5px;
+  background:linear-gradient(180deg,#3a8f5c,#2f7d4f);color:#fff;border:1px solid #27673f;
+  display:flex;align-items:center;justify-content:center;gap:5px;transition:transform .08s ease;
+}
+.btn:active{transform:translateY(1px) scale(.995)}
+.btn .price{font-weight:600;opacity:.92;font-variant-numeric:tabular-nums}
+.btn.ghost{background:#fff;color:var(--green-d);border:1px solid #cfe0cd}
+.btn.gold{background:linear-gradient(180deg,#e0ac4b,#c98a24);border-color:#a9741c;color:#fff}
+.btn.pink{background:linear-gradient(180deg,#d76a86,#c94f6d);border-color:#a83b55;color:#fff}
+.btn.danger{background:linear-gradient(180deg,#c9593e,#b2452e);border-color:#93341f;color:#fff}
+.btn.wide{width:100%}
+.btn[disabled],.btn.disabled{opacity:.45;filter:grayscale(.35);cursor:not-allowed}
+.btn.dim{background:#f2eddf;color:#7d7666;border-color:#e5dcc8}
+.area-head{display:flex;align-items:center;gap:8px;margin:14px 2px 8px;font-size:13px;font-weight:800;color:#5f5a4a;letter-spacing:1px}
+.area-head .line{flex:1;height:1px;background:var(--line)}
+.area-head .cnt{font-weight:600;font-size:11px;color:var(--muted);letter-spacing:0}
+.footnote{font-size:11.5px;color:var(--muted);margin:12px 2px 4px;line-height:1.6}
+.upgrade{padding:12px;display:flex;flex-direction:column;gap:9px}
+.up-actions{display:flex;gap:8px}
+.up-actions .btn{flex:1}
+/* codex */
+.codex{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.codex-item{padding:12px;display:flex;flex-direction:column;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.codex-item.locked{background:#faf6ec;box-shadow:none}
+.codex-item .ce{font-size:26px}
+.codex-item.locked .ce{filter:grayscale(1);opacity:.4}
+.codex-item h3{font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.codex-item p{font-size:11.5px;color:var(--muted);line-height:1.5}
+.codex-item .meta{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+/* achievements */
+.ach-item{padding:11px 12px;display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.ach-item.off{background:#faf7ee;box-shadow:none;opacity:.72}
+.ach-ico{width:38px;height:38px;flex:0 0 auto;display:grid;place-items:center;font-size:19px;border-radius:11px;background:var(--amber-l);border:1px solid #eddcb2}
+.ach-item.off .ach-ico{background:#f1ece0;border-color:#e3dccb;filter:grayscale(1)}
+.ach-body{flex:1;min-width:0}
+.ach-body h3{font-size:14px;font-weight:700}
+.ach-body p{font-size:11.5px;color:var(--muted)}
+.ach-flag{font-size:11px;font-weight:700;color:var(--green)}
+.ach-item.off .ach-flag{color:#a9a293}
+/* orders */
+.order{padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.order .o-top{display:flex;gap:10px;align-items:center}
+.order .o-ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:var(--pink-l);border:1px solid #f0ccd6}
+.order .o-body{flex:1;min-width:0}
+.order .o-body h3{font-size:14px;font-weight:700}
+.order .o-body p{font-size:11.5px;color:var(--muted)}
+.order .o-reward{font-size:12px;font-weight:700;color:var(--pink);white-space:nowrap}
+.order .o-prog{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.order.done{opacity:.6}
+/* research */
+.res{padding:12px;display:flex;flex-direction:column;gap:8px}
+.res .r-top{display:flex;gap:10px;align-items:flex-start}
+.res .r-ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:19px;background:var(--green-l);border:1px solid #cbe2cd}
+.res .r-body{flex:1;min-width:0}
+.res .r-body h3{font-size:14px;font-weight:700;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.res .r-body p{font-size:11.5px;color:var(--muted)}
+.pips{display:flex;gap:3px;margin-top:6px}
+.pips i{width:14px;height:5px;border-radius:3px;background:#e9e2cf}
+.pips i.on{background:var(--green)}
+/* prestige */
+.prestige{padding:14px;display:flex;flex-direction:column;gap:9px;background:linear-gradient(170deg,#fffdf7,#f6f0df)}
+.prestige h3{font-size:15px;font-weight:800;display:flex;align-items:center;gap:6px}
+.prestige .marks{font-size:13px;color:var(--muted)}
+.prestige .marks b{color:var(--pink);font-size:18px}
+.mini{font-size:11.5px;color:var(--muted);line-height:1.55}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:#fbf7ec;border:1px solid #eee4cf;border-radius:11px;padding:8px 10px}
+.stat .k{font-size:11px;color:var(--muted)}
+.stat .v{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;word-break:break-all}
+/* tabs */
+.tabs{
+  position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(5,1fr);
+  background:rgba(255,253,247,.96);backdrop-filter:blur(8px);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.tabs button{min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10.5px;color:#9a927f;font-weight:600;transition:color .15s ease}
+.tabs button span{font-size:18px;line-height:1;filter:grayscale(.45);transition:filter .15s ease}
+.tabs button.active{color:var(--green-d)}
+.tabs button.active span{filter:none}
+/* modal & toast */
+.modal{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:20px;background:rgba(46,40,28,.45);backdrop-filter:blur(3px)}
+.modal[hidden]{display:none}
+.modal-card{width:100%;max-width:340px;background:var(--card);border-radius:20px;padding:20px;text-align:center;box-shadow:0 14px 40px rgba(40,32,16,.28);border:1px solid #f0e6cd}
+.modal-ico{font-size:34px;line-height:1}
+.modal-card h2{font-size:17px;margin:6px 0 6px}
+.modal-card p{font-size:12.5px;color:var(--muted)}
+.gain{font-size:26px;font-weight:800;color:var(--amber);margin:10px 0 6px;font-variant-numeric:tabular-nums;word-break:break-all}
+.gain small{font-size:13px;color:var(--muted);font-weight:600;margin-left:4px}
+.modal-card .btn{margin-top:14px}
+.toast{
+  position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom));transform:translate(-50%,10px);
+  background:rgba(42,38,28,.93);color:#fff;font-size:12.5px;padding:9px 15px;border-radius:999px;
+  opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;z-index:50;max-width:86vw;text-align:center;
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media (max-width:360px){ .sp-sub{font-size:11.5px} .btn{font-size:12.5px;padding:8px 8px} .stat-grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><span class="logo">🌾</span><span>云边牧场</span></div>
+    <div class="wallet">
+      <div class="coin"><span class="coin-ico">🪙</span><strong id="coinNum">0</strong></div>
+      <div class="wallet-sub"><span id="rateNum">+0/秒</span><span class="dot">·</span><span id="multNum">×1.00</span><span class="dot">·</span><span id="heartNum">💗0</span></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="tab-panel active" data-panel="farm">
+      <div class="panel-head">
+        <h1>牧场</h1>
+        <p class="hint" id="farmHint">22 种动物 · 6 个牧场区</p>
+      </div>
+      <div id="farmList"></div>
+      <p class="footnote">动物每秒自动产金。离线收益默认按 50%、最多 8 小时结算，升级「离线管家」和研究可以再提高。</p>
+    </section>
+
+    <section class="tab-panel" data-panel="upgrade">
+      <div class="panel-head">
+        <h1>升级</h1>
+        <p class="hint">全局倍数 · 自动化 · 传承</p>
+      </div>
+      <div id="feedCard" class="card upgrade"></div>
+      <div id="autoList" class="list" style="margin-top:10px"></div>
+      <div id="prestigeCard" class="card prestige" style="margin-top:10px"></div>
+    </section>
+
+    <section class="tab-panel" data-panel="orders">
+      <div class="panel-head">
+        <h1>委托</h1>
+        <p class="hint" id="orderHint">💗 0 爱心</p>
+      </div>
+      <div id="orderList" class="list"></div>
+      <p class="footnote">委托达成后自动结算爱心，并立刻换成下一单。爱心拿去点「研究」，研究永久生效、传承后也保留。</p>
+    </section>
+
+    <section class="tab-panel" data-panel="research">
+      <div class="panel-head">
+        <h1>研究</h1>
+        <p class="hint" id="resHint">💗 0 爱心</p>
+      </div>
+      <div id="resList" class="list"></div>
+      <p class="footnote">研究用爱心升级，不会因为传承而清空，是长线变强的核心。</p>
+    </section>
+
+    <section class="tab-panel" data-panel="codex">
+      <div class="panel-head">
+        <h1>图鉴</h1>
+        <p class="hint" id="codexCount">0/22</p>
+      </div>
+      <div id="codexList" class="codex"></div>
+      <div class="area-head" style="margin-top:18px"><span>🏅 成就</span><span class="line"></span><span class="cnt" id="achCount">0/30</span></div>
+      <div id="achList" class="list"></div>
+      <p class="footnote">每达成一个成就，全局产量 +2%，永久有效。</p>
+    </section>
+  </main>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="farm" class="active"><span>🌾</span>牧场</button>
+    <button data-tab="upgrade"><span>⚡</span>升级</button>
+    <button data-tab="orders"><span>📜</span>委托</button>
+    <button data-tab="research"><span>🔬</span>研究</button>
+    <button data-tab="codex"><span>📖</span>图鉴</button>
+  </nav>
+</div>
+
+<div class="modal" id="offlineModal" hidden>
+  <div class="modal-card">
+    <div class="modal-ico">🌙</div>
+    <h2>离线收益</h2>
+    <p id="offlineLine">你离开了 0 分钟</p>
+    <div class="gain"><span id="offlineGain">0</span><small>金币</small></div>
+    <p class="mini" id="offlineNote"></p>
+    <button class="btn wide" id="btnOfflineOk">收下</button>
+  </div>
+</div>
+
+<div class="modal" id="prestigeModal" hidden>
+  <div class="modal-card">
+    <div class="modal-ico">🔥</div>
+    <h2>牧场传承</h2>
+    <p id="prestigeLine"></p>
+    <div class="gain"><span id="prestigeGain">0</span><small>枚印记</small></div>
+    <p class="mini" id="prestigeNote"></p>
+    <div class="up-actions" style="margin-top:14px">
+      <button class="btn ghost" id="btnPrestigeNo">再想想</button>
+      <button class="btn pink" id="btnPrestigeYes">确认传承</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" aria-live="polite"></div>
+<script>
+(function(){
+'use strict';
+
+var SAVE_KEY = 'ycy-farm-save-v2';
+var SAVE_VER = 2;
+
+var CFG = {
+  startCoins: 40,
+  maxLevel: 25,
+  buyGrowth: 1.155,
+  levelStep: 0.35,
+  upBase: 0.55,
+  upGrowth: 1.57,
+  feedMax: 20,
+  feedBase: 600,
+  feedGrowth: 2.35,
+  feedStep: 0.15,
+  achBonus: 0.02,
+  offlineMinSec: 60,
+  offlineCapBase: 8 * 3600,
+  offlineCapUp: 12 * 3600,
+  offlineEffBase: 0.5,
+  offlineEffUp: 1,
+  markBonus: 0.02,
+  prestigeEarn: 1e12,
+  autoBuyEvery: 0.6,
+  autoLevelEvery: 1.2,
+  orderCount: 3
+};
+
+var AREAS = [
+  { id:'coop', name:'鸡舍', emoji:'🏠' },
+  { id:'meadow', name:'草场', emoji:'🌿' },
+  { id:'forest', name:'林地', emoji:'🌳' },
+  { id:'pond', name:'水塘', emoji:'💧' },
+  { id:'mountain', name:'山地', emoji:'⛰️' },
+  { id:'cloud', name:'云端', emoji:'☁️' }
+];
+
+var SP_DEF = [
+  ['chicken','鸡','🐔','coop','农场的第一声打鸣，天没亮就把所有人叫起来干活。'],
+  ['duck','鸭','🦆','coop','一群鸭摇摇摆摆下水，回来时肚子都鼓了。'],
+  ['goose','鹅','🦢','coop','看家比狗还凶，生蛋比鸡还勤快。'],
+
+  ['rabbit','兔','🐰','meadow','三瓣嘴一天啃掉半亩苜蓿，窝边的草堆得像小山。'],
+  ['pig','猪','🐖','meadow','吃饱就睡，睡醒再吃，长得比谁都快。'],
+  ['sheep','羊','🐑','meadow','每年剪两次毛，攒下的够织一整冬的毯子。'],
+  ['goat','山羊','🐐','meadow','再陡的坡都上得去，挤出来的奶做奶酪最香。'],
+
+  ['cow','牛','🐄','forest','沉默的老伙计，拉车、挤奶、耕地样样在行。'],
+  ['horse','马','🐎','forest','跑一趟镇上，把货带回农场，来回都是钱。'],
+  ['donkey','驴','🫏','forest','脾气倔，可是驮得比谁都多。'],
+  ['deer','鹿','🦌','forest','林子深处跑出来的，鹿茸一年只有一季。'],
+
+  ['fish','鱼','🐟','pond','挖了三口塘，撒下去的是鱼苗，捞上来的是钱。'],
+  ['crab','蟹','🦀','pond','横行霸道，一到秋天价格就翻倍。'],
+  ['otter','水獭','🦦','pond','仰躺在水面上啃蚌，顺手帮你把塘里的螺清了。'],
+
+  ['bee','蜂','🐝','mountain','蜂箱一开，整片果园都跟着甜起来。'],
+  ['badger','貂','🦡','mountain','夜里出门，白天睡觉，皮毛是山上最贵的。'],
+  ['alpaca','羊驼','🦙','mountain','毛比羊毛软，脾气比羊还温顺。'],
+  ['peacock','孔雀','🦚','mountain','开屏那一下，游客的钱包也跟着开了。'],
+
+  ['elephant','象','🐘','cloud','一头象能顶半个施工队，木料再也不用人扛。'],
+  ['whale','鲸','🐋','cloud','后山水库养出来的怪东西，一口吞下整片鱼群。'],
+  ['dragon','龙','🐉','cloud','传说它守着后山的云海，一呼一吸都是收成。'],
+  ['phoenix','凤凰','🔥','cloud','在云上盘旋一圈，整座牧场都染上金色。']
+];
+
+var CFG_COST_RATIO = 3.3;
+var CFG_RATE_RATIO = 2.6;
+
+var SPECIES = SP_DEF.map(function(d, i){
+  return {
+    id: d[0], name: d[1], emoji: d[2], area: d[3], desc: d[4],
+    base: Math.round(10 * Math.pow(CFG_COST_RATIO, i)),
+    rate: Math.round(0.5 * Math.pow(CFG_RATE_RATIO, i) * 100) / 100,
+    unlock: i === 0 ? null : {
+      earn: Math.round(15 * 10 * Math.pow(CFG_COST_RATIO, i)),
+      prev: d[3] && SP_DEF[i - 1][0],
+      prevN: 3
+    }
+  };
+});
+
+var AUTOS = [
+  { id:'autoBuy', name:'自动采购', emoji:'🤖', cost:3000,
+    desc:'每 0.6 秒自动买下当前最划算的一只动物，可随时开关。' },
+  { id:'autoLevel', name:'自动饲养', emoji:'📈', cost:30000,
+    desc:'每 1.2 秒自动给最划算的动物升一级，满级跳过。' },
+  { id:'offlineMgr', name:'离线管家', emoji:'🌙', cost:250000,
+    desc:'离线效率 50% → 100%，离线上限 8 小时 → 12 小时。' }
+];
+
+var RESEARCH = [
+  { id:'rate', name:'产金强化', emoji:'💰', max:10, base:40, growth:1.55, desc:'全局产量 +10%/级' },
+  { id:'cheap', name:'批量议价', emoji:'🏷️', max:5, base:120, growth:1.9, desc:'动物价格 -4%/级' },
+  { id:'auto', name:'自动化提速', emoji:'⚙️', max:3, base:200, growth:2.2, desc:'自动采购间隔 -15%/级' },
+  { id:'offline', name:'离线效率', emoji:'🌙', max:5, base:150, growth:1.8, desc:'离线效率 +10%/级' },
+  { id:'cap', name:'离线时长', emoji:'⏳', max:4, base:180, growth:1.9, desc:'离线上限 +2 小时/级' },
+  { id:'order', name:'委托谈判', emoji:'📜', max:5, base:220, growth:1.8, desc:'委托爱心 +20%/级' },
+  { id:'start', name:'启动资金', emoji:'💼', max:3, base:300, growth:2.4, desc:'重开/传承后起始金币 ×4/级' },
+  { id:'mark', name:'印记共鸣', emoji:'🔥', max:3, base:500, growth:2.5, desc:'传承印记收益 +25%/级' },
+  { id:'feed', name:'饲料配方', emoji:'🌾', max:5, base:260, growth:1.85, desc:'饲料每级效果 +5%' },
+  { id:'level', name:'饲养手册', emoji:'📘', max:3, base:400, growth:2.3, desc:'动物升级效果 +10%/级' }
+];
+
+var ACHS = [
+  { id:'first', name:'开张', ico:'🐣', desc:'买下第一只动物', cond:function(){ return totalAnimals() >= 1; } },
+  { id:'n10', name:'小有规模', ico:'🏡', desc:'动物总数达到 10 只', cond:function(){ return totalAnimals() >= 10; } },
+  { id:'n50', name:'半个村子', ico:'🏘️', desc:'动物总数达到 50 只', cond:function(){ return totalAnimals() >= 50; } },
+  { id:'n200', name:'牧场主', ico:'🏰', desc:'动物总数达到 200 只', cond:function(){ return totalAnimals() >= 200; } },
+  { id:'n500', name:'畜牧大户', ico:'🚜', desc:'动物总数达到 500 只', cond:function(){ return totalAnimals() >= 500; } },
+  { id:'n1000', name:'千畜之家', ico:'🌾', desc:'动物总数达到 1000 只', cond:function(){ return totalAnimals() >= 1000; } },
+  { id:'e1k', name:'第一桶金', ico:'💰', desc:'累计收益达到 1,000', cond:function(s){ return s.stats.lifetimeEarned >= 1e3; } },
+  { id:'e1m', name:'百万流水', ico:'💎', desc:'累计收益达到 100 万', cond:function(s){ return s.stats.lifetimeEarned >= 1e6; } },
+  { id:'e1b', name:'十亿牧场', ico:'👑', desc:'累计收益达到 10 亿', cond:function(s){ return s.stats.lifetimeEarned >= 1e9; } },
+  { id:'e1t', name:'万亿规模', ico:'🏛️', desc:'累计收益达到 1 万亿', cond:function(s){ return s.stats.lifetimeEarned >= 1e12; } },
+  { id:'e1q', name:'千兆传奇', ico:'🌌', desc:'累计收益达到 1000 兆', cond:function(s){ return s.stats.lifetimeEarned >= 1e15; } },
+  { id:'area6', name:'六区全开', ico:'🗺️', desc:'六个牧场区全部开放', cond:function(){ return AREAS.every(function(a){ return speciesInArea(a.id).some(function(sp){ return isUnlocked(sp); }); }); } },
+  { id:'allsp', name:'海陆空齐全', ico:'🌈', desc:'解锁全部 22 种动物', cond:function(){ return SPECIES.every(function(sp){ return isUnlocked(sp); }); } },
+  { id:'phoenix', name:'凤凰来仪', ico:'🔥', desc:'养出第一只凤凰', cond:function(s){ return s.species.phoenix.n >= 1; } },
+  { id:'maxone', name:'头号功臣', ico:'⭐', desc:'把任意一种动物养到满级', cond:function(s){ return SPECIES.some(function(sp){ return s.species[sp.id].lv >= CFG.maxLevel; }); } },
+  { id:'max10', name:'十全十美', ico:'🎖️', desc:'十种动物满级', cond:function(s){ return SPECIES.filter(function(sp){ return s.species[sp.id].lv >= CFG.maxLevel; }).length >= 10; } },
+  { id:'maxall', name:'满级牧场', ico:'🏆', desc:'全部 22 种动物满级', cond:function(s){ return SPECIES.every(function(sp){ return s.species[sp.id].lv >= CFG.maxLevel; }); } },
+  { id:'autoall', name:'甩手掌柜', ico:'🛋️', desc:'三项自动化全部买下', cond:function(s){ return AUTOS.every(function(a){ return s.autos[a.id].owned; }); } },
+  { id:'feedmax', name:'顶级饲料', ico:'🌾', desc:'饲料升到满级', cond:function(s){ return s.feed >= CFG.feedMax; } },
+  { id:'off1k', name:'睡后收入', ico:'🌙', desc:'单次离线收益达到 1,000', cond:function(s){ return (s.stats.lastOffline || 0) >= 1e3; } },
+  { id:'ord1', name:'第一单', ico:'📜', desc:'完成 1 个委托', cond:function(s){ return s.stats.ordersDone >= 1; } },
+  { id:'ord10', name:'老主顾', ico:'🤝', desc:'完成 10 个委托', cond:function(s){ return s.stats.ordersDone >= 10; } },
+  { id:'ord50', name:'金牌供货商', ico:'🏅', desc:'完成 50 个委托', cond:function(s){ return s.stats.ordersDone >= 50; } },
+  { id:'res5', name:'初窥门径', ico:'🔬', desc:'研究等级合计达到 5', cond:function(s){ return totalResearch() >= 5; } },
+  { id:'res20', name:'研究所所长', ico:'🧪', desc:'研究等级合计达到 20', cond:function(s){ return totalResearch() >= 20; } },
+  { id:'resmax', name:'独门绝技', ico:'📕', desc:'任意一项研究满级', cond:function(s){ return RESEARCH.some(function(r){ return (s.research[r.id] || 0) >= r.max; }); } },
+  { id:'pres1', name:'薪火相传', ico:'🔥', desc:'完成 1 次传承', cond:function(s){ return s.stats.prestiges >= 1; } },
+  { id:'pres5', name:'五代牧场', ico:'🏯', desc:'完成 5 次传承', cond:function(s){ return s.stats.prestiges >= 5; } },
+  { id:'mark100', name:'百枚印记', ico:'✴️', desc:'印记累计达到 100 枚', cond:function(s){ return s.marks >= 100; } },
+  { id:'heart1k', name:'爱心满满', ico:'💗', desc:'累计获得 1000 爱心', cond:function(s){ return s.stats.heartsEarned >= 1000; } }
+];
+
+/* ---------------- 工具 ---------------- */
+function $(sel, root){ return (root || document).querySelector(sel); }
+function byId(id){ for (var i=0;i<SPECIES.length;i++) if (SPECIES[i].id===id) return SPECIES[i]; return null; }
+function autoById(id){ for (var i=0;i<AUTOS.length;i++) if (AUTOS[i].id===id) return AUTOS[i]; return null; }
+function resById(id){ for (var i=0;i<RESEARCH.length;i++) if (RESEARCH[i].id===id) return RESEARCH[i]; return null; }
+function speciesInArea(a){ return SPECIES.filter(function(sp){ return sp.area === a; }); }
+function areaById(id){ for (var i=0;i<AREAS.length;i++) if (AREAS[i].id===id) return AREAS[i]; return null; }
+function clampNum(v, lo, hi){ v = Number(v); if (!isFinite(v)) return lo; return Math.min(hi, Math.max(lo, v)); }
+
+var BIG_U = [[1e28,'穰'],[1e24,'秭'],[1e20,'垓'],[1e16,'京'],[1e12,'兆'],[1e8,'亿'],[1e4,'万']];
+function fmt(n){
+  if (typeof n !== 'number' || !isFinite(n)) return '∞';
+  var neg = n < 0; n = Math.abs(n);
+  var out;
+  if (n < 1e4) {
+    if (n === 0) out = '0';
+    else if (n < 10) out = (Math.round(n*100)/100).toFixed(2).replace(/\.?0+$/, '');
+    else out = String(Math.floor(n));
+  } else {
+    out = String(Math.floor(n));
+    for (var i=0;i<BIG_U.length;i++){
+      var v = BIG_U[i][0];
+      if (n >= v){
+        var x = n/v;
+        out = (x<10 ? x.toFixed(2) : x<100 ? x.toFixed(1) : String(Math.floor(x))) + BIG_U[i][1];
+        break;
+      }
+    }
+  }
+  if (out === '') out = '0';
+  return (neg ? '-' : '') + out;
+}
+function fmtInt(n){ return Math.floor(n).toLocaleString('zh-CN'); }
+function fmtRate(n){
+  if (!isFinite(n) || n === 0) return '0';
+  if (n < 10) return (Math.round(n*100)/100).toFixed(2).replace(/\.?0+$/, '');
+  return fmt(n);
+}
+function fmtDur(sec){
+  sec = Math.max(0, Math.round(sec));
+  if (sec < 60) return sec + ' 秒';
+  var m = Math.floor(sec/60), s = sec%60;
+  if (m < 60) return m + ' 分' + (s ? ' ' + s + ' 秒' : '');
+  var h = Math.floor(m/60); m = m%60;
+  if (h < 24) return h + ' 小时' + (m ? ' ' + m + ' 分' : '');
+  var d = Math.floor(h/24); h = h%24;
+  return d + ' 天' + (h ? ' ' + h + ' 小时' : '');
+}
+
+/* ---------------- 状态 ---------------- */
+function newState(){
+  var s = {
+    v: SAVE_VER,
+    coins: CFG.startCoins,
+    hearts: 0,
+    marks: 0,
+    totalEarned: 0,
+    feed: 1,
+    species: {},
+    autos: {},
+    research: {},
+    ach: {},
+    orders: [],
+    orderSeq: 1,
+    stats: { startedAt: Date.now(), playSec: 0, offlineGain: 0, lastOffline: 0, buys: 0, ups: 0,
+             ordersDone: 0, prestiges: 0, heartsEarned: 0, lifetimeEarned: 0 },
+    lastSeen: Date.now()
+  };
+  SPECIES.forEach(function(sp){ s.species[sp.id] = { n:0, lv:1 }; });
+  AUTOS.forEach(function(a){ s.autos[a.id] = { owned:false, on:true }; });
+  RESEARCH.forEach(function(r){ s.research[r.id] = 0; });
+  return s;
+}
+
+var state = null;
+var autoBuyTimer = 0, autoLevelTimer = 0;
+
+function resLevel(id){ return state && state.research ? (state.research[id] || 0) : 0; }
+function resCost(r){
+  var lv = resLevel(r.id);
+  return Math.ceil(r.base * Math.pow(r.growth, lv));
+}
+function totalResearch(){
+  var t = 0;
+  RESEARCH.forEach(function(r){ t += resLevel(r.id); });
+  return t;
+}
+function totalAnimals(){
+  var t = 0;
+  SPECIES.forEach(function(sp){ t += state.species[sp.id].n; });
+  return t;
+}
+function isUnlocked(sp){
+  if (!sp.unlock) return true;
+  if (state.totalEarned < sp.unlock.earn) return false;
+  var prev = state.species[sp.unlock.prev];
+  return !!prev && prev.n >= sp.unlock.prevN;
+}
+function priceFactor(){ return Math.max(0.8, 1 - 0.04 * resLevel('cheap')); }
+function buyCost(sp){
+  var n = state.species[sp.id].n;
+  return Math.ceil(sp.base * Math.pow(CFG.buyGrowth, n) * priceFactor());
+}
+function levelStep(){ return CFG.levelStep + 0.035 * resLevel('level'); }
+function upCost(sp){
+  var lv = state.species[sp.id].lv;
+  return Math.ceil(sp.base * CFG.upBase * Math.pow(CFG.upGrowth, lv - 1) * priceFactor());
+}
+function feedCost(){ return Math.ceil(CFG.feedBase * Math.pow(CFG.feedGrowth, state.feed - 1)); }
+function feedMult(){ return 1 + (CFG.feedStep + 0.05 * resLevel('feed')) * (state.feed - 1); }
+function achCount(){ var c = 0; ACHS.forEach(function(a){ if (state.ach[a.id]) c++; }); return c; }
+function achMult(){ return 1 + CFG.achBonus * achCount(); }
+function markMult(){ return 1 + CFG.markBonus * state.marks; }
+function resMult(){ return 1 + 0.10 * resLevel('rate'); }
+function globalMult(){ return feedMult() * achMult() * markMult() * resMult(); }
+function speciesRate(id){
+  var sp = byId(id), st = state.species[id];
+  return st.n * sp.rate * (1 + levelStep() * (st.lv - 1));
+}
+function totalRate(){
+  var t = 0;
+  SPECIES.forEach(function(sp){ t += speciesRate(sp.id); });
+  return t * globalMult();
+}
+function animalRate(sp){ return sp.rate * (1 + levelStep() * (state.species[sp.id].lv - 1)) * globalMult(); }
+function startCoins(){ return Math.round(CFG.startCoins * Math.pow(4, resLevel('start'))); }
+
+/* ---------------- 动作 ---------------- */
+function pulse(id){
+  var card = document.querySelector('.species[data-id="' + id + '"]');
+  if (!card) return;
+  card.style.transition = 'transform .12s ease';
+  card.style.transform = 'scale(1.012)';
+  setTimeout(function(){ card.style.transform = ''; }, 120);
+}
+
+function buy(id, opts){
+  opts = opts || {};
+  var sp = byId(id);
+  if (!sp || !state) return false;
+  if (!isUnlocked(sp)){ if (!opts.silent) toast('还没解锁「' + sp.name + '」'); return false; }
+  var cost = buyCost(sp);
+  if (state.coins < cost){
+    if (!opts.silent) toast('金币不够，再等 ' + fmtDur((cost - state.coins) / Math.max(totalRate(), 0.0001)));
+    return false;
+  }
+  state.coins -= cost;
+  state.species[id].n += 1;
+  state.stats.buys += 1;
+  if (!opts.silent){ pulse(id); toast('买下 1 只' + sp.name + '，花费 ' + fmt(cost)); }
+  checkAch();
+  if (!opts.silent) renderAll();
+  return true;
+}
+
+function upgrade(id, opts){
+  opts = opts || {};
+  var sp = byId(id);
+  if (!sp || !state) return false;
+  var st = state.species[id];
+  if (!isUnlocked(sp)){ if (!opts.silent) toast('还没解锁「' + sp.name + '」'); return false; }
+  if (st.lv >= CFG.maxLevel){ if (!opts.silent) toast(sp.name + '已经是满级 Lv.' + CFG.maxLevel); return false; }
+  var cost = upCost(sp);
+  if (state.coins < cost){ if (!opts.silent) toast('金币不够升级，还差 ' + fmt(cost - state.coins)); return false; }
+  state.coins -= cost;
+  st.lv += 1;
+  state.stats.ups += 1;
+  if (!opts.silent){ pulse(id); toast(sp.name + ' 升到 Lv.' + st.lv + '，花费 ' + fmt(cost)); }
+  checkAch();
+  if (!opts.silent) renderAll();
+  return true;
+}
+
+function buyFeed(){
+  if (state.feed >= CFG.feedMax){ toast('饲料已经满级'); return false; }
+  var cost = feedCost();
+  if (state.coins < cost){ toast('金币不够，还差 ' + fmt(cost - state.coins)); return false; }
+  state.coins -= cost;
+  state.feed += 1;
+  toast('饲料升到 Lv.' + state.feed + '，全局产量 ×' + feedMult().toFixed(2));
+  checkAch(); renderAll();
+  return true;
+}
+
+function buyAuto(id){
+  var a = autoById(id);
+  if (!a) return false;
+  if (state.autos[id].owned){ toast(a.name + '已经买过了'); return false; }
+  if (state.coins < a.cost){ toast('金币不够，还差 ' + fmt(a.cost - state.coins)); return false; }
+  state.coins -= a.cost;
+  state.autos[id].owned = true;
+  state.autos[id].on = true;
+  toast('已启用 ' + a.name);
+  checkAch(); renderAll();
+  return true;
+}
+
+function toggleAuto(id){
+  var st = state.autos[id];
+  if (!st || !st.owned) return false;
+  st.on = !st.on;
+  toast(autoById(id).name + (st.on ? ' 已开启' : ' 已暂停'));
+  renderUpgrades();
+  return true;
+}
+
+function buyResearch(id){
+  var r = resById(id);
+  if (!r) return false;
+  var lv = resLevel(id);
+  if (lv >= r.max){ toast(r.name + '已经满级'); return false; }
+  var cost = resCost(r);
+  if (state.hearts < cost){ toast('爱心不够，还差 ' + (cost - state.hearts) + ' 💗'); return false; }
+  state.hearts -= cost;
+  state.research[id] = lv + 1;
+  toast(r.name + ' 升到 Lv.' + (lv + 1));
+  checkAch(); renderAll();
+  return true;
+}
+
+function bestBuyTarget(){
+  var best = null;
+  SPECIES.forEach(function(sp){
+    if (!isUnlocked(sp)) return;
+    var cost = buyCost(sp);
+    if (cost > state.coins) return;
+    var score = animalRate(sp) / cost;
+    if (!best || score > best.score) best = { sp: sp, score: score };
+  });
+  return best ? best.sp : null;
+}
+
+function bestUpTarget(){
+  var best = null;
+  SPECIES.forEach(function(sp){
+    var st = state.species[sp.id];
+    if (!isUnlocked(sp) || st.lv >= CFG.maxLevel) return;
+    var cost = upCost(sp);
+    if (cost > state.coins) return;
+    var gain = st.n * sp.rate * levelStep() * globalMult();
+    if (gain <= 0) return;
+    var score = gain / cost;
+    if (!best || score > best.score) best = { sp: sp, score: score };
+  });
+  return best ? best.sp : null;
+}
+
+/* ---------------- 委托 ---------------- */
+function orderMult(){ return 1 + 0.2 * resLevel('order'); }
+function orderReward(){
+  var base = 8 + 4 * Math.log10(1 + state.totalEarned / 1e3);
+  return Math.max(5, Math.round(base * orderMult()));
+}
+function makeOrder(){
+  var pool = SPECIES.filter(isUnlocked);
+  var kinds = ['own', 'rate', 'coins', 'level'];
+  var kind = kinds[Math.floor(Math.random() * kinds.length)];
+  var reward = orderReward();
+  var desc = '', sp = null, target = 0;
+  if (kind === 'rate'){
+    target = Math.max(5, totalRate() * 3);
+    desc = '每秒产出达到 ' + fmtRate(target) + '/秒';
+  } else if (kind === 'coins'){
+    target = Math.max(200, totalRate() * 120);
+    desc = '手上同时持有 ' + fmt(target) + ' 金币';
+  } else if (kind === 'level'){
+    var cands = pool.filter(function(x){ return state.species[x.id].lv < CFG.maxLevel; });
+    if (cands.length){
+      sp = cands[Math.floor(Math.random() * cands.length)];
+      target = Math.min(CFG.maxLevel, state.species[sp.id].lv + 1 + Math.floor(Math.random() * 3));
+      desc = '把' + sp.name + '养到 Lv.' + target;
+    } else {
+      kind = 'own';
+    }
+  }
+  if (kind === 'own'){
+    sp = pool[Math.floor(Math.random() * pool.length)];
+    var n = state.species[sp.id].n;
+    target = n + Math.max(3, Math.ceil(n * 0.15));
+    desc = '养到 ' + target + ' 只' + sp.name;
+  }
+  return { id: state.orderSeq++, kind: kind, sp: sp ? sp.id : null, target: target, reward: reward, desc: desc };
+}
+function ensureOrders(){
+  while (state.orders.length < CFG.orderCount) state.orders.push(makeOrder());
+}
+function orderDone(o){
+  if (o.kind === 'own') return state.species[o.sp].n >= o.target;
+  if (o.kind === 'rate') return totalRate() >= o.target;
+  if (o.kind === 'coins') return state.coins >= o.target;
+  if (o.kind === 'level') return state.species[o.sp].lv >= o.target;
+  return false;
+}
+function orderProgress(o){
+  var now = 0;
+  if (o.kind === 'own') now = state.species[o.sp].n;
+  else if (o.kind === 'rate') now = totalRate();
+  else if (o.kind === 'coins') now = state.coins;
+  else if (o.kind === 'level') now = state.species[o.sp].lv;
+  return { now: now, pct: Math.max(0, Math.min(1, o.target > 0 ? now / o.target : 0)) };
+}
+function checkOrders(){
+  if (!state.orders || !state.orders.length) return;
+  for (var i = 0; i < state.orders.length; i++){
+    var o = state.orders[i];
+    if (orderDone(o)){
+      state.hearts += o.reward;
+      state.stats.heartsEarned += o.reward;
+      state.stats.ordersDone += 1;
+      toast('📜 委托完成：' + o.desc + ' · +' + o.reward + ' 爱心');
+      state.orders[i] = makeOrder();
+    }
+  }
+}
+
+/* ---------------- 传承 ---------------- */
+function potentialMarks(){ return Math.floor(Math.sqrt(Math.max(0, state.totalEarned) / CFG.prestigeEarn)); }
+function marksAvailable(){
+  var raw = Math.floor(potentialMarks() * (1 + 0.25 * resLevel('mark')));
+  return Math.max(0, raw - state.marks);
+}
+function canPrestige(){ return marksAvailable() >= 1; }
+function doPrestige(){
+  if (!canPrestige()) return false;
+  var gain = marksAvailable();
+  state.marks += gain;
+  state.stats.prestiges += 1;
+  state.coins = startCoins();
+  state.totalEarned = 0;
+  state.feed = 1;
+  SPECIES.forEach(function(sp){ state.species[sp.id] = { n: 0, lv: 1 }; });
+  state.orders = [];
+  state.orderSeq = 1;
+  ensureOrders();
+  checkAch();
+  save(); renderAll(); switchTab('farm');
+  toast('🔥 传承完成：+' + gain + ' 枚印记（全局产量 ×' + markMult().toFixed(2) + '）');
+  return true;
+}
+
+/* ---------------- 成就 ---------------- */
+function checkAch(){
+  var got = false;
+  for (var i = 0; i < ACHS.length; i++){
+    var a = ACHS[i];
+    if (state.ach[a.id]) continue;
+    var ok = false;
+    try { ok = !!a.cond(state); } catch (e) { ok = false; }
+    if (ok){ state.ach[a.id] = true; got = true; toast('🏅 成就达成：' + a.name); }
+  }
+  return got;
+}
+
+/* ---------------- 存档 ---------------- */
+function save(){
+  if (!state) return false;
+  try {
+    state.lastSeen = Date.now();
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    return true;
+  } catch (e) { return false; }
+}
+
+function normalize(src){
+  if (!src || typeof src !== 'object') throw new Error('存档结构不对');
+  if (typeof src.coins !== 'number' || !isFinite(src.coins) || src.coins < 0) throw new Error('金币数据不对');
+  var s = newState();
+  s.coins = src.coins;
+  s.hearts = Math.max(0, Number(src.hearts) || 0);
+  s.marks = Math.max(0, Number(src.marks) || 0);
+  s.totalEarned = Math.max(0, Number(src.totalEarned) || 0);
+  s.feed = Math.floor(clampNum(src.feed, 1, CFG.feedMax));
+  if (src.species && typeof src.species === 'object'){
+    SPECIES.forEach(function(sp){
+      var x = src.species[sp.id];
+      if (x && typeof x === 'object'){
+        s.species[sp.id] = {
+          n: Math.floor(clampNum(x.n, 0, 1e8)),
+          lv: Math.floor(clampNum(x.lv, 1, CFG.maxLevel))
+        };
+      }
+    });
+  }
+  if (src.autos && typeof src.autos === 'object'){
+    AUTOS.forEach(function(a){
+      var x = src.autos[a.id];
+      if (x && typeof x === 'object') s.autos[a.id] = { owned: !!x.owned, on: x.on !== false };
+    });
+  }
+  if (src.research && typeof src.research === 'object'){
+    RESEARCH.forEach(function(r){ s.research[r.id] = Math.floor(clampNum(src.research[r.id], 0, r.max)); });
+  }
+  if (src.ach && typeof src.ach === 'object'){
+    ACHS.forEach(function(a){ if (src.ach[a.id] === true) s.ach[a.id] = true; });
+  }
+  if (src.stats && typeof src.stats === 'object'){
+    var st = src.stats;
+    s.stats.startedAt = Number(st.startedAt) || Date.now();
+    ['playSec','offlineGain','lastOffline','buys','ups','ordersDone','prestiges','heartsEarned','lifetimeEarned'].forEach(function(k){
+      s.stats[k] = Math.max(0, Number(st[k]) || 0);
+    });
+    s.stats.lifetimeEarned = Math.max(s.stats.lifetimeEarned, s.totalEarned);
+  }
+  if (Array.isArray(src.orders)){
+    src.orders.forEach(function(o){
+      if (!o || typeof o !== 'object') return;
+      var kind = ['own','rate','coins','level'].indexOf(o.kind) >= 0 ? o.kind : 'rate';
+      var sp = o.sp && byId(o.sp) ? o.sp : null;
+      if ((kind === 'own' || kind === 'level') && !sp) return;
+      var target = Number(o.target);
+      if (!isFinite(target) || target <= 0) return;
+      s.orders.push({ id: s.orderSeq++, kind: kind, sp: sp, target: target, reward: Math.max(1, Number(o.reward) || 10), desc: String(o.desc || '委托') });
+    });
+  }
+  if (s.orders.length > CFG.orderCount) s.orders.length = CFG.orderCount;
+  s.lastSeen = (typeof src.lastSeen === 'number' && isFinite(src.lastSeen)) ? src.lastSeen : Date.now();
+  s.v = SAVE_VER;
+  return s;
+}
+
+function offlineCalc(gapSec){
+  var up = !!(state.autos && state.autos.offlineMgr && state.autos.offlineMgr.owned);
+  var cap = (up ? CFG.offlineCapUp : CFG.offlineCapBase) + 7200 * resLevel('cap');
+  var eff = (up ? CFG.offlineEffUp : CFG.offlineEffBase) + 0.1 * resLevel('offline');
+  var used = Math.min(Math.max(0, gapSec), cap);
+  return { gap: gapSec, used: used, cap: cap, eff: eff, capped: gapSec > cap + 1, gained: totalRate() * used * eff };
+}
+
+var pendingOffline = null;
+
+function load(){
+  var raw = null;
+  try { raw = localStorage.getItem(SAVE_KEY); } catch (e) {}
+  var loaded = null;
+  if (raw){
+    try { loaded = normalize(JSON.parse(raw)); } catch (e) { loaded = null; }
+  }
+  state = loaded || newState();
+  ensureOrders();
+  var gap = loaded ? (Date.now() - (loaded.lastSeen || Date.now())) / 1000 : 0;
+  if (gap >= CFG.offlineMinSec){
+    var info = offlineCalc(gap);
+    state.coins += info.gained;
+    state.totalEarned += info.gained;
+    state.stats.lifetimeEarned += info.gained;
+    state.stats.offlineGain += info.gained;
+    state.stats.lastOffline = info.gained;
+    state.lastSeen = Date.now();
+    pendingOffline = info;
+  }
+  checkAch();
+  renderAll();
+  if (pendingOffline) showOffline(pendingOffline);
+  return { loaded: !!loaded, gap: gap, offline: pendingOffline };
+}
+
+/* ---------------- 渲染 ---------------- */
+var currentTab = 'farm';
+var lastUnlockKey = '';
+
+function unlockKey(){
+  return SPECIES.map(function(sp){ return isUnlocked(sp) ? '1' : '0'; }).join('');
+}
+
+function cardHTML(sp){
+  if (!isUnlocked(sp)){
+    var u = sp.unlock, prev = byId(u.prev);
+    return '<article class="card species locked" data-id="' + sp.id + '">'
+      + '<div class="sp-top"><div class="sp-emoji">' + sp.emoji + '</div>'
+      + '<div class="sp-meta"><div class="sp-name">' + sp.name + ' <span class="pill grey">未解锁</span></div>'
+      + '<div class="sp-sub">条件：累计收益 ' + fmt(u.earn) + ' 且 ' + prev.name + ' 达 ' + u.prevN + ' 只</div>'
+      + '<div class="bar"><i data-el="lbar"></i></div></div></div></article>';
+  }
+  var st = state.species[sp.id];
+  return '<article class="card species" data-id="' + sp.id + '">'
+    + '<div class="sp-top"><div class="sp-emoji">' + sp.emoji + '</div>'
+    + '<div class="sp-meta">'
+    + '<div class="sp-name">' + sp.name + ' <span class="pill" data-el="lv">Lv.' + st.lv + '</span></div>'
+    + '<div class="sp-sub"><b data-el="n">' + st.n + '</b> 只 · 每只 <span data-el="per">' + fmtRate(animalRate(sp)) + '</span>/秒 · 合计 <b data-el="sum">' + fmtRate(speciesRate(sp.id)) + '</b>/秒</div>'
+    + '<div class="bar"><i data-el="bar"></i></div>'
+    + '</div></div>'
+    + '<div class="sp-actions">'
+    + '<button class="btn" data-act="buy" data-id="' + sp.id + '">购买 <span class="price" data-el="bp">' + fmt(buyCost(sp)) + '</span></button>'
+    + '<button class="btn ghost" data-act="up" data-id="' + sp.id + '">升级 <span class="price" data-el="up">' + (st.lv >= CFG.maxLevel ? '满级' : fmt(upCost(sp))) + '</span></button>'
+    + '</div></article>';
+}
+
+function renderFarm(){
+  lastUnlockKey = unlockKey();
+  var html = '';
+  AREAS.forEach(function(a){
+    var list = speciesInArea(a.id);
+    var opened = list.filter(function(sp){ return isUnlocked(sp); });
+    var pending = list.filter(function(sp){ return !isUnlocked(sp); });
+    if (!opened.length && !pending.length) return;
+    html += '<div class="area-head"><span>' + a.emoji + ' ' + a.name + '</span><span class="line"></span><span class="cnt">' + opened.length + '/' + list.length + '</span></div>';
+    html += '<div class="list">';
+    opened.forEach(function(sp){ html += cardHTML(sp); });
+    if (pending.length){
+      html += cardHTML(pending[0]);
+      if (pending.length > 1) html += '<div class="mini" style="padding:2px 4px 4px">本区还有 ' + (pending.length - 1) + ' 种待解锁</div>';
+    }
+    html += '</div>';
+  });
+  $('#farmList').innerHTML = html;
+  var openedTotal = SPECIES.filter(function(sp){ return isUnlocked(sp); }).length;
+  $('#farmHint').textContent = '已解锁 ' + openedTotal + '/' + SPECIES.length + ' 种';
+  updateFarm();
+}
+
+function updateFarm(){
+  SPECIES.forEach(function(sp){
+    var card = document.querySelector('.species[data-id="' + sp.id + '"]');
+    if (!card) return;
+    var st = state.species[sp.id];
+    if (card.classList.contains('locked')){
+      var u = sp.unlock, prev = byId(u.prev);
+      var p1 = Math.min(1, state.totalEarned / u.earn);
+      var p2 = Math.min(1, prev ? st.n / u.prevN : 1);
+      var lbar = card.querySelector('[data-el="lbar"]');
+      if (lbar) lbar.style.width = Math.round(Math.min(p1, p2) * 100) + '%';
+      var sub = card.querySelector('.sp-sub');
+      if (sub) sub.textContent = '条件：累计收益 ' + fmt(u.earn) + '（' + fmt(state.totalEarned) + '）且 ' + prev.name + ' 达 ' + u.prevN + ' 只（' + st.n + '）';
+      return;
+    }
+    var n = card.querySelector('[data-el="n"]');
+    if (n) n.textContent = st.n;
+    var per = card.querySelector('[data-el="per"]');
+    if (per) per.textContent = fmtRate(animalRate(sp));
+    var sum = card.querySelector('[data-el="sum"]');
+    if (sum) sum.textContent = fmtRate(speciesRate(sp.id));
+    var lv = card.querySelector('[data-el="lv"]');
+    if (lv) lv.textContent = 'Lv.' + st.lv;
+    var cost = buyCost(sp);
+    var bp = card.querySelector('[data-el="bp"]');
+    if (bp) bp.textContent = fmt(cost);
+    var bar = card.querySelector('[data-el="bar"]');
+    if (bar) bar.style.width = Math.round(Math.min(1, state.coins / cost) * 100) + '%';
+    var buyBtn = card.querySelector('[data-act="buy"]');
+    if (buyBtn) buyBtn.classList.toggle('dim', state.coins < cost);
+    var upBtn = card.querySelector('[data-act="up"]');
+    if (upBtn){
+      var maxed = st.lv >= CFG.maxLevel;
+      var upEl = card.querySelector('[data-el="up"]');
+      if (upEl) upEl.textContent = maxed ? '满级' : fmt(upCost(sp));
+      upBtn.classList.toggle('dim', maxed || state.coins < upCost(sp));
+      upBtn.classList.toggle('disabled', maxed);
+    }
+  });
+}
+
+function renderUpgrades(){
+  var cost = feedCost(), maxed = state.feed >= CFG.feedMax;
+  $('#feedCard').innerHTML = '<div class="sp-top"><div class="sp-emoji">🌾</div>'
+    + '<div class="sp-meta"><div class="sp-name">营养饲料 <span class="pill gold">Lv.' + state.feed + '/' + CFG.feedMax + '</span></div>'
+    + '<div class="sp-sub">全局产量 ×' + feedMult().toFixed(2) + ' · 每级 +' + Math.round((CFG.feedStep + 0.05 * resLevel('feed')) * 100) + '%</div>'
+    + '<div class="bar"><i data-el="fbar"></i></div></div></div>'
+    + '<div class="up-actions"><button class="btn gold' + (maxed || state.coins < cost ? ' dim' : '') + '" data-act="feed"' + (maxed ? ' disabled' : '') + '>'
+    + (maxed ? '饲料已满级' : '升级饲料 <span class="price">' + fmt(cost) + '</span>') + '</button></div>';
+  var fb = $('#feedCard [data-el="fbar"]');
+  if (fb) fb.style.width = Math.round(Math.min(1, state.coins / cost) * 100) + '%';
+
+  var html = '';
+  AUTOS.forEach(function(a){
+    var st = state.autos[a.id];
+    var pill = st.owned ? (st.on ? '<span class="pill">运行中</span>' : '<span class="pill grey">已暂停</span>') : '<span class="pill grey">未购买</span>';
+    var btn;
+    if (!st.owned){
+      btn = '<button class="btn' + (state.coins < a.cost ? ' dim' : '') + '" data-act="auto" data-id="' + a.id + '">购买 <span class="price">' + fmt(a.cost) + '</span></button>';
+    } else {
+      btn = '<button class="btn ' + (st.on ? 'ghost' : 'gold') + '" data-act="toggle" data-id="' + a.id + '">' + (st.on ? '暂停' : '开启') + '</button>';
+    }
+    var extra = a.id === 'autoBuy' ? '（当前间隔 ' + (CFG.autoBuyEvery * (1 - 0.15 * resLevel('auto'))).toFixed(2) + ' 秒）' : '';
+    html += '<article class="card upgrade"><div class="sp-top"><div class="sp-emoji">' + a.emoji + '</div>'
+      + '<div class="sp-meta"><div class="sp-name">' + a.name + ' ' + pill + '</div>'
+      + '<div class="sp-sub">' + a.desc + extra + '</div></div></div>'
+      + '<div class="up-actions">' + btn + '</div></article>';
+  });
+  $('#autoList').innerHTML = html;
+
+  var gain = marksAvailable();
+  $('#prestigeCard').innerHTML = '<h3>🔥 牧场传承</h3>'
+    + '<div class="marks">本轮累计收益 ' + fmt(state.totalEarned) + ' · 当前印记 <b>' + state.marks + '</b> 枚（产量 ×' + markMult().toFixed(2) + '）</div>'
+    + '<p class="mini">传承会清空金币、动物和饲料，把本轮累计收益换成印记：每枚印记永久 +2% 全局产量，祝福、研究与成就都会保留。累计收益到 ' + fmt(CFG.prestigeEarn) + ' 就能传承第一次。</p>'
+    + '<div class="up-actions"><button class="btn pink' + (gain < 1 ? ' dim' : '') + '" data-act="prestige"' + (gain < 1 ? ' disabled' : '') + '>'
+    + (gain < 1 ? '还差 ' + fmt(Math.max(0, CFG.prestigeEarn - state.totalEarned)) + ' 收益' : '传承：可得 ' + gain + ' 枚印记') + '</button></div>';
+}
+
+function renderOrders(){
+  $('#orderHint').textContent = '💗 ' + fmtInt(state.hearts) + ' 爱心';
+  var html = '';
+  state.orders.forEach(function(o, i){
+    var p = orderProgress(o);
+    html += '<article class="card order" data-oid="' + o.id + '">'
+      + '<div class="o-top"><div class="o-ico">📜</div>'
+      + '<div class="o-body"><h3>' + o.desc + '</h3><p>达成后自动结算，立刻换下一单</p></div>'
+      + '<div class="o-reward">+' + o.reward + ' 💗</div></div>'
+      + '<div class="bar"><i data-el="obar"></i></div>'
+      + '<div class="o-prog" data-el="oprog">进度 ' + fmt(p.now) + ' / ' + fmt(o.target) + '</div>'
+      + '</article>';
+  });
+  $('#orderList').innerHTML = html;
+  updateOrders();
+}
+
+function updateOrders(){
+  state.orders.forEach(function(o){
+    var card = document.querySelector('.order[data-oid="' + o.id + '"]');
+    if (!card) return;
+    var p = orderProgress(o);
+    var bar = card.querySelector('[data-el="obar"]');
+    if (bar) bar.style.width = Math.round(p.pct * 100) + '%';
+    var txt = card.querySelector('[data-el="oprog"]');
+    if (txt) txt.textContent = '进度 ' + fmt(p.now) + ' / ' + fmt(o.target) + '（' + Math.floor(p.pct * 100) + '%）';
+  });
+}
+
+function renderResearch(){
+  $('#resHint').textContent = '💗 ' + fmtInt(state.hearts) + ' 爱心';
+  var html = '';
+  RESEARCH.forEach(function(r){
+    var lv = resLevel(r.id), maxed = lv >= r.max, cost = resCost(r);
+    var pips = '';
+    for (var i = 0; i < r.max; i++) pips += '<i class="' + (i < lv ? 'on' : '') + '"></i>';
+    html += '<article class="card res">'
+      + '<div class="r-top"><div class="r-ico">' + r.emoji + '</div>'
+      + '<div class="r-body"><h3>' + r.name + ' <span class="pill">Lv.' + lv + '/' + r.max + '</span></h3>'
+      + '<p>' + r.desc + '</p><div class="pips">' + pips + '</div></div></div>'
+      + '<div class="up-actions"><button class="btn' + (maxed || state.hearts < cost ? ' dim' : '') + '" data-act="res" data-id="' + r.id + '"' + (maxed ? ' disabled' : '') + '>'
+      + (maxed ? '已满级' : '升级 · 💗' + fmtInt(cost)) + '</button></div></article>';
+  });
+  $('#resList').innerHTML = html;
+}
+
+function renderCodex(){
+  var got = 0, html = '';
+  SPECIES.forEach(function(sp){
+    var un = isUnlocked(sp);
+    if (un) got++;
+    var st = state.species[sp.id];
+    html += '<div class="codex-item' + (un ? '' : ' locked') + '">'
+      + '<div class="ce">' + (un ? sp.emoji : '❔') + '</div>'
+      + '<h3>' + (un ? sp.name : '未解锁') + (un ? ' <span class="pill">Lv.' + st.lv + '</span>' : '') + '</h3>'
+      + '<p>' + (un ? sp.desc : '累计收益 ' + fmt(sp.unlock.earn) + ' 并养 ' + byId(sp.unlock.prev).name + ' ' + sp.unlock.prevN + ' 只后开放。') + '</p>'
+      + '<div class="meta">' + (un ? (st.n + ' 只 · 合计 ' + fmtRate(speciesRate(sp.id)) + '/秒') : '尚未解锁') + '</div></div>';
+  });
+  $('#codexList').innerHTML = html;
+  $('#codexCount').textContent = '已收集 ' + got + '/' + SPECIES.length;
+
+  var ahtml = '';
+  ACHS.forEach(function(a){
+    var on = !!state.ach[a.id];
+    ahtml += '<div class="ach-item' + (on ? '' : ' off') + '">'
+      + '<div class="ach-ico">' + (on ? a.ico : '🔒') + '</div>'
+      + '<div class="ach-body"><h3>' + a.name + '</h3><p>' + a.desc + '</p></div>'
+      + '<div class="ach-flag">' + (on ? '已达成' : '未达成') + '</div></div>';
+  });
+  $('#achList').innerHTML = ahtml;
+  $('#achCount').textContent = achCount() + '/' + ACHS.length + ' · 产量 +' + Math.round((achMult() - 1) * 100) + '%';
+}
+
+function renderHeader(){
+  $('#coinNum').textContent = fmt(state.coins);
+  $('#rateNum').textContent = '+' + fmtRate(totalRate()) + '/秒';
+  $('#multNum').textContent = '×' + globalMult().toFixed(2);
+  $('#heartNum').textContent = '💗' + fmt(state.hearts);
+}
+
+function renderAll(){
+  if (!state) return;
+  renderHeader();
+  if (currentTab === 'farm') renderFarm();
+  if (currentTab === 'upgrade') renderUpgrades();
+  if (currentTab === 'orders') renderOrders();
+  if (currentTab === 'research') renderResearch();
+  if (currentTab === 'codex') renderCodex();
+}
+
+function tickUI(){
+  if (!state) return;
+  renderHeader();
+  if (currentTab === 'farm'){
+    if (unlockKey() !== lastUnlockKey) renderFarm();
+    else updateFarm();
+  } else if (currentTab === 'orders'){
+    updateOrders();
+  }
+}
+
+/* ---------------- 主循环 ---------------- */
+function tick(dt){
+  if (!state || !(dt > 0)) return;
+  var gain = totalRate() * dt;
+  state.coins += gain;
+  state.totalEarned += gain;
+  state.stats.lifetimeEarned += gain;
+  state.stats.playSec += dt;
+
+  var buyEvery = CFG.autoBuyEvery * (1 - 0.15 * resLevel('auto'));
+  if (state.autos.autoBuy.owned && state.autos.autoBuy.on){
+    autoBuyTimer += dt;
+    var guard = 0;
+    while (autoBuyTimer >= buyEvery && guard++ < 50){
+      autoBuyTimer -= buyEvery;
+      var tb = bestBuyTarget();
+      if (!tb){ autoBuyTimer = 0; break; }
+      buy(tb.id, { silent: true });
+    }
+  } else { autoBuyTimer = 0; }
+
+  if (state.autos.autoLevel.owned && state.autos.autoLevel.on){
+    autoLevelTimer += dt;
+    var guard2 = 0;
+    while (autoLevelTimer >= CFG.autoLevelEvery && guard2++ < 50){
+      autoLevelTimer -= CFG.autoLevelEvery;
+      var tu = bestUpTarget();
+      if (!tu){ autoLevelTimer = 0; break; }
+      upgrade(tu.id, { silent: true });
+    }
+  } else { autoLevelTimer = 0; }
+
+  checkOrders();
+  checkAch();
+}
+
+var saveTimer = 0;
+var lastTick = Date.now();
+
+function loop(){
+  var now = Date.now();
+  var dt = (now - lastTick) / 1000;
+  lastTick = now;
+  if (!(dt > 0)) dt = 0;
+  if (dt > 180) dt = 180;
+  tick(dt);
+  saveTimer += dt;
+  if (saveTimer >= 5){ saveTimer = 0; save(); }
+  tickUI();
+}
+
+/* ---------------- 弹窗与提示 ---------------- */
+function showOffline(info){
+  $('#offlineLine').textContent = '你离开了 ' + fmtDur(info.gap)
+    + (info.capped ? '（上限 ' + fmtDur(info.cap) + '，超出的部分不再累计）' : '');
+  $('#offlineGain').textContent = fmt(info.gained);
+  $('#offlineNote').textContent = '结算效率 ' + Math.round(info.eff * 100) + '% · 有效时长 ' + fmtDur(info.used)
+    + (state.autos.offlineMgr.owned ? ' · 离线管家已生效' : '');
+  $('#offlineModal').hidden = false;
+}
+
+function openPrestigeModal(){
+  var gain = marksAvailable();
+  $('#prestigeLine').textContent = '本轮累计收益 ' + fmt(state.totalEarned) + '，传承会清空金币、动物和饲料。';
+  $('#prestigeGain').textContent = fmt(gain);
+  $('#prestigeNote').textContent = '之后全局产量永久 ×' + (1 + CFG.markBonus * (state.marks + gain)).toFixed(2)
+    + '（印记 ' + (state.marks + gain) + ' 枚）；爱心、研究、自动化、成就都会保留。';
+  $('#prestigeModal').hidden = false;
+}
+
+var toastQueue = [], toastBusy = false;
+function toast(msg){
+  toastQueue.push(String(msg));
+  if (!toastBusy) runToast();
+}
+function runToast(){
+  var msg = toastQueue.shift();
+  if (msg === undefined){ toastBusy = false; return; }
+  toastBusy = true;
+  var box = $('#toast');
+  box.textContent = msg;
+  box.classList.add('show');
+  setTimeout(function(){
+    box.classList.remove('show');
+    setTimeout(runToast, 200);
+  }, 1500);
+}
+
+/* ---------------- 交互 ---------------- */
+function switchTab(name){
+  currentTab = name;
+  var panels = document.querySelectorAll('.tab-panel');
+  for (var i = 0; i < panels.length; i++) panels[i].classList.toggle('active', panels[i].getAttribute('data-panel') === name);
+  var btns = document.querySelectorAll('#tabs button');
+  for (var j = 0; j < btns.length; j++) btns[j].classList.toggle('active', btns[j].getAttribute('data-tab') === name);
+  renderAll();
+  window.scrollTo(0, 0);
+}
+
+document.addEventListener('click', function(e){
+  var btn = e.target.closest ? e.target.closest('[data-act]') : null;
+  if (!btn || !state) return;
+  var act = btn.getAttribute('data-act');
+  var id = btn.getAttribute('data-id');
+  if (act === 'buy') buy(id);
+  else if (act === 'up') upgrade(id);
+  else if (act === 'feed') buyFeed();
+  else if (act === 'auto') buyAuto(id);
+  else if (act === 'toggle') toggleAuto(id);
+  else if (act === 'res') buyResearch(id);
+  else if (act === 'prestige') openPrestigeModal();
+});
+
+$('#tabs').addEventListener('click', function(e){
+  var b = e.target.closest ? e.target.closest('button[data-tab]') : null;
+  if (!b) return;
+  switchTab(b.getAttribute('data-tab'));
+});
+
+$('#btnOfflineOk').addEventListener('click', function(){
+  $('#offlineModal').hidden = true;
+  save();
+});
+$('#btnPrestigeNo').addEventListener('click', function(){ $('#prestigeModal').hidden = true; });
+$('#btnPrestigeYes').addEventListener('click', function(){
+  $('#prestigeModal').hidden = true;
+  doPrestige();
+});
+
+document.addEventListener('visibilitychange', function(){
+  if (document.hidden) save();
+  else lastTick = Date.now();
+});
+window.addEventListener('pagehide', save);
+window.addEventListener('beforeunload', save);
+
+/* ---------------- 对外接口 ---------------- */
+window.Farm = {
+  CFG: CFG, AREAS: AREAS, SPECIES: SPECIES, AUTOS: AUTOS, RESEARCH: RESEARCH, ACHS: ACHS,
+  get state(){ return state; },
+  newState: newState, normalize: normalize,
+  applyState: function(o){ state = normalize(o); ensureOrders(); lastUnlockKey = ''; renderAll(); },
+  load: load, save: save,
+  totalRate: totalRate, speciesRate: speciesRate, animalRate: animalRate, totalAnimals: totalAnimals,
+  buyCost: buyCost, upCost: upCost, feedCost: feedCost, resCost: resCost,
+  feedMult: feedMult, achMult: achMult, markMult: markMult, resMult: resMult, globalMult: globalMult,
+  isUnlocked: isUnlocked, buy: buy, upgrade: upgrade, buyFeed: buyFeed,
+  buyAuto: buyAuto, toggleAuto: toggleAuto, buyResearch: buyResearch,
+  checkAch: checkAch, achCount: achCount, totalResearch: totalResearch,
+  makeOrder: makeOrder, ensureOrders: ensureOrders, checkOrders: checkOrders, orderDone: orderDone, orderProgress: orderProgress,
+  potentialMarks: potentialMarks, marksAvailable: marksAvailable, canPrestige: canPrestige, doPrestige: doPrestige,
+  tick: tick, offlineCalc: offlineCalc, renderAll: renderAll, switchTab: switchTab,
+  showOffline: showOffline, openPrestigeModal: openPrestigeModal,
+  fmt: fmt, fmtDur: fmtDur, bestBuyTarget: bestBuyTarget, bestUpTarget: bestUpTarget
+};
+
+load();
+lastTick = Date.now();
+setInterval(loop, 200);
+})();
+</script>
+</body>
+</html>
